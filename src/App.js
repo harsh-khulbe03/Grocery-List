@@ -10,15 +10,41 @@ import { useState,useEffect } from "react";
 
 function App() {
 
-  const [items,setItems] = useState(JSON.parse(localStorage.getItem('shoppinglist')) || []);
+  const API_FETCH = 'http://localhost:3500/itemss';
+
+  const [items,setItems] = useState([]);
 
   const [newItem,setNewItem] = useState("");
 
   const [search, setSearch] = useState('');
 
+  const [fetchError,setFetchError] = useState(null);
+
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    localStorage.setItem("shoppinglist",JSON.stringify(items));
-  },[items])
+    const fetchItems =async () => {
+      try{
+        const response = await fetch(API_FETCH);
+        if(!response.ok) {
+          throw Error("Did not recieve expected data");
+        }
+        const listItems = await response.json();
+        console.log(listItems);
+        setItems(listItems);
+
+        setFetchError(null);
+      } catch(err){
+         console.log(err.message);
+         setFetchError(err.message);
+      }finally {
+        setIsLoading(false);
+      }
+    }
+    setTimeout(() => {
+      (async () => await fetchItems())();
+    },2000)
+  },[])
 
   const addItem = (item) => {
     const id = items.length ? items[items.length - 1]+1 : 1;
@@ -57,11 +83,16 @@ function App() {
       search={search}
       setSearch={setSearch}
       />
-      <Content 
-      items={items.filter(item => ((item.item).toLowerCase().includes(search.toLowerCase())))}
-      handleCheck={handleCheck}
-      handleDelete={handleDelete}
-      />
+
+      <main>
+        {isLoading && <p>Loading items...</p>}
+        {fetchError && <p style={{color:"red"}}>{`Error: ${fetchError}`}</p>}
+        {!fetchError && !isLoading && <Content 
+        items={items.filter(item => ((item.item).toLowerCase().includes(search.toLowerCase())))}
+        handleCheck={handleCheck}
+        handleDelete={handleDelete}
+        />}
+      </main>
       <Footer length={items.length}/>
     </div>
   );
